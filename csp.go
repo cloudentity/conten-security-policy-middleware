@@ -26,12 +26,12 @@ const (
 // policy string it will not be included in the policy output
 type Config struct {
 	WebSocket    bool     // enable dynamic websocket support in CSP
-	Default      string   // default-src CSP policy
-	Script       string   // script-src CSP policy
-	Connect      string   // connect-src CSP policy
-	Img          string   // img-src CSP policy
-	Style        string   // style-src CSP policy
-	Font         string   // font-src CSP policy
+	Default      []string // default-src CSP policy
+	Script       []string // script-src CSP policy
+	Connect      []string // connect-src CSP policy
+	Img          []string // img-src CSP policy
+	Style        []string // style-src CSP policy
+	Font         []string // font-src CSP policy
 	ReportURI    string   // report-uri CSP violation reports URI
 	IgnorePrefix []string // URL prefixes not to apply CSP too
 }
@@ -41,11 +41,11 @@ type Config struct {
 // Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style: 'self';
 func StarterConfig() Config {
 	return Config{
-		Default: None,
-		Script:  Self,
-		Connect: Self,
-		Img:     Self,
-		Style:   Self,
+		Default: []string{None},
+		Script:  []string{Self},
+		Connect: []string{Self},
+		Img:     []string{Self},
+		Style:   []string{Self},
 	}
 }
 
@@ -92,23 +92,23 @@ func (csp *CSP) HandlerFunc() http.HandlerFunc {
 func (csp *CSP) handlerFunc() http.HandlerFunc {
 	// Do as much work during construction as possible
 	var defaultPolicy, scriptPolicy, connectPolicy, imgPolicy, stylePolicy, fontPolicy, reportPolicy, baseConnectPolicy string
-	if csp.Default != "" {
-		defaultPolicy = fmt.Sprintf("%s %s;", DefaultSrc, csp.Default)
+	if len(csp.Default) > 0 {
+		defaultPolicy = fmt.Sprintf("%s %s;", DefaultSrc, strings.Join(csp.Default, " "))
 	}
-	if csp.Script != "" {
-		scriptPolicy = fmt.Sprintf(" %s %s;", ScriptSrc, csp.Script)
+	if len(csp.Script) > 0 {
+		scriptPolicy = fmt.Sprintf(" %s %s;", ScriptSrc, strings.Join(csp.Script, " "))
 	}
-	if csp.Connect != "" {
-		baseConnectPolicy = fmt.Sprintf(" %s %s", ConnectSrc, csp.Connect)
+	if len(csp.Connect) > 0 {
+		baseConnectPolicy = fmt.Sprintf(" %s %s", ConnectSrc, strings.Join(csp.Connect, " "))
 	}
-	if csp.Img != "" {
-		imgPolicy = fmt.Sprintf(" %s %s;", ImgSrc, csp.Img)
+	if len(csp.Img) > 0 {
+		imgPolicy = fmt.Sprintf(" %s %s;", ImgSrc, strings.Join(csp.Img, " "))
 	}
-	if csp.Style != "" {
-		stylePolicy = fmt.Sprintf(" %s %s;", StyleSrc, csp.Style)
+	if len(csp.Style) > 0 {
+		stylePolicy = fmt.Sprintf(" %s %s;", StyleSrc, strings.Join(csp.Style, " "))
 	}
-	if csp.Font != "" {
-		fontPolicy = fmt.Sprintf(" %s %s;", FontSrc, csp.Font)
+	if len(csp.Font) > 0 {
+		fontPolicy = fmt.Sprintf(" %s %s;", FontSrc, strings.Join(csp.Font, " "))
 	}
 	if csp.ReportURI != "" {
 		reportPolicy = fmt.Sprintf(" %s %s;", ReportURI, csp.ReportURI)

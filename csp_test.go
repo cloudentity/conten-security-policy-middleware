@@ -28,7 +28,7 @@ func TestHandlerNoPolicy(t *testing.T) {
 
 func TestHandlerDefaultPolicy(t *testing.T) {
 	csp := New(Config{
-		Default: None,
+		Default: []string{None},
 	})
 	fn := csp.HandlerFunc()
 
@@ -44,7 +44,7 @@ func TestHandlerDefaultPolicy(t *testing.T) {
 
 func TestHandlerScriptPolicy(t *testing.T) {
 	csp := New(Config{
-		Script: Self,
+		Script: []string{Self},
 	})
 	fn := csp.HandlerFunc()
 
@@ -60,7 +60,7 @@ func TestHandlerScriptPolicy(t *testing.T) {
 
 func TestHandlerConnect(t *testing.T) {
 	csp := New(Config{
-		Connect: Self,
+		Connect: []string{Self},
 	})
 	fn := csp.HandlerFunc()
 
@@ -76,7 +76,7 @@ func TestHandlerConnect(t *testing.T) {
 
 func TestHandlerConnectWebSocket(t *testing.T) {
 	csp := New(Config{
-		Connect:   Self,
+		Connect:   []string{Self},
 		WebSocket: true,
 	})
 	fn := csp.HandlerFunc()
@@ -94,7 +94,7 @@ func TestHandlerConnectWebSocket(t *testing.T) {
 
 func TestHandlerConnectWebSocketDuplicateHeader(t *testing.T) {
 	csp := New(Config{
-		Connect:   Self,
+		Connect:   []string{Self},
 		WebSocket: true,
 	})
 	fn := csp.HandlerFunc()
@@ -121,7 +121,7 @@ func TestHandlerConnectWebSocketDuplicateHeader(t *testing.T) {
 
 func TestHandlerConnectTLSWebSocket(t *testing.T) {
 	csp := New(Config{
-		Connect:   Self,
+		Connect:   []string{Self},
 		WebSocket: true,
 	})
 	fn := csp.HandlerFunc()
@@ -157,7 +157,7 @@ func TestHandlerConnectWebSocketOnly(t *testing.T) {
 
 func TestHandlerImg(t *testing.T) {
 	csp := New(Config{
-		Img: Self,
+		Img: []string{Self},
 	})
 	fn := csp.HandlerFunc()
 
@@ -174,7 +174,7 @@ func TestHandlerImg(t *testing.T) {
 
 func TestHandlerStyle(t *testing.T) {
 	csp := New(Config{
-		Style: Self,
+		Style: []string{Self},
 	})
 	fn := csp.HandlerFunc()
 
@@ -191,11 +191,11 @@ func TestHandlerStyle(t *testing.T) {
 
 func TestHandlerEverything(t *testing.T) {
 	csp := New(Config{
-		Default: None,
-		Script:  Self,
-		Connect: Self,
-		Img:     Self,
-		Style:   Self,
+		Default: []string{None},
+		Script:  []string{Self},
+		Connect: []string{Self},
+		Img:     []string{Self},
+		Style:   []string{Self},
 	})
 	fn := csp.HandlerFunc()
 
@@ -213,7 +213,7 @@ func TestHandlerEverything(t *testing.T) {
 
 func TestHandlerAny(t *testing.T) {
 	csp := New(Config{
-		Default: Any,
+		Default: []string{Any},
 	})
 	fn := csp.HandlerFunc()
 
@@ -231,11 +231,11 @@ func TestHandlerAny(t *testing.T) {
 
 func TestNegroniIntegration(t *testing.T) {
 	csp := New(Config{
-		Default: None,
-		Script:  Self,
-		Connect: Self,
-		Img:     Self,
-		Style:   Self,
+		Default: []string{None},
+		Script:  []string{Self},
+		Connect: []string{Self},
+		Img:     []string{Self},
+		Style:   []string{Self},
 	})
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -267,7 +267,7 @@ func TestNegroniIntegration(t *testing.T) {
 // Ensure Middleware Chain is being invoked
 func TestHandlerNegroniMiddlewareChain(t *testing.T) {
 	csp := New(Config{
-		Connect: Self,
+		Connect: []string{Self},
 	})
 
 	mux := http.NewServeMux()
@@ -300,12 +300,12 @@ func TestHandlerNegroniMiddlewareChain(t *testing.T) {
 
 func TestAliceIntegration(t *testing.T) {
 	csp := New(Config{
-		Default: None,
-		Script:  Self,
-		Connect: Self,
-		Img:     Self,
-		Style:   Self,
-		Font:    Self,
+		Default: []string{None},
+		Script:  []string{Self},
+		Connect: []string{Self},
+		Img:     []string{Self},
+		Style:   []string{Self},
+		Font:    []string{Self},
 	})
 	stdChain := alice.New(csp.Middleware)
 	mux := http.NewServeMux()
@@ -336,8 +336,8 @@ func TestAliceIntegration(t *testing.T) {
 
 func TestPartialConfig(t *testing.T) {
 	csp := New(Config{
-		Script:  Self,
-		Connect: Self,
+		Script:  []string{Self},
+		Connect: []string{Self},
 	})
 	stdChain := alice.New(csp.Middleware)
 	mux := http.NewServeMux()
