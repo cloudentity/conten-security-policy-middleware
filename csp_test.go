@@ -15,12 +15,15 @@ import (
 	"github.com/urfave/negroni"
 )
 
-func TestBaseCsp(t *testing.T) {
+func TestCspBase(t *testing.T) {
 
 	var testcases = []struct {
 		name           string
 		csp            *CSP
+		hostHeader     string
+		tls            bool
 		expectedHeader string
+		ctx            context.Context
 	}{
 		{
 			name:           "empty config",
@@ -84,7 +87,6 @@ func TestBaseCsp(t *testing.T) {
 			}),
 			expectedHeader: "default-src 'none' default-test; script-src 'self' script-test; connect-src 'self' connect-test; img-src 'self' img-test; style-src 'self' style-test;",
 		},
-
 		{
 			name: "any",
 			csp: New(Config{
@@ -92,150 +94,90 @@ func TestBaseCsp(t *testing.T) {
 			}),
 			expectedHeader: "default-src *;",
 		},
+
+		{
+			name: "websocket only",
+			csp: New(Config{
+				WebSocket: true,
+			}),
+			hostHeader:     "localhost:3000",
+			expectedHeader: " connect-src ws://localhost:3000;",
+		},
+		{
+			name: "connect websocket handler",
+			csp: New(Config{
+				Connect:   []string{Self},
+				WebSocket: true,
+			}),
+			hostHeader:     "localhost:3000",
+			expectedHeader: " connect-src 'self' ws://localhost:3000;",
+		},
+		{
+			name: "connect tls websocket handler",
+			csp: New(Config{
+				Connect:   []string{Self},
+				WebSocket: true,
+			}),
+			hostHeader:     "localhost:3000",
+			tls:            true,
+			expectedHeader: " connect-src 'self' wss://localhost:3000;",
+		},
+		{
+			name: "connect tls websocket handler with host overwrite",
+			csp: New(Config{
+				Connect:   []string{Self},
+				WebSocket: true,
+			}).WithHostProvider(func(ctx context.Context) string {
+				return ctx.Value("originalHost").(string)
+			}),
+			hostHeader:     "localhost:3000",
+			tls:            true,
+			expectedHeader: " connect-src 'self' wss://example.com;",
+			ctx:            context.WithValue(context.Background(), "originalHost", "example.com"),
+		},
+		{
+			name: "connect tls websocket handler with host empty in context",
+			csp: New(Config{
+				Connect:   []string{Self},
+				WebSocket: true,
+			}).WithHostProvider(func(ctx context.Context) string {
+				return ctx.Value(123456).(string)
+			}),
+			hostHeader:     "localhost:3000",
+			tls:            true,
+			expectedHeader: " connect-src 'self' wss://localhost:3000;",
+			ctx:            context.WithValue(context.Background(), 123456, ""),
+		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(tt *testing.T) {
-			fn := tc.csp.HandlerFunc()
-
+			var (
+				err error
+				r   *http.Request
+			)
 			rw := httptest.NewRecorder()
-			r := &http.Request{}
+
+			if tc.ctx != nil {
+				r, err = http.NewRequestWithContext(tc.ctx, http.MethodGet, "localhost:3000", nil)
+				require.NoError(tt, err)
+			} else {
+				r, err = http.NewRequestWithContext(context.Background(), http.MethodGet, "localhost:3000", nil)
+				require.NoError(tt, err)
+			}
+			if tc.hostHeader != "" {
+				r.Host = tc.hostHeader
+			}
+			if tc.tls {
+				r.TLS = &tls.ConnectionState{}
+			}
+			fn := tc.csp.HandlerFunc()
 			fn(rw, r)
 			header := rw.Header().Get(CSPHeader)
 			require.Equal(t, tc.expectedHeader, header)
 
 		})
 	}
-
-}
-
-func TestHandlerConnectWebSocket(t *testing.T) {
-	csp := New(Config{
-		Connect:   []string{Self},
-		WebSocket: true,
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get("Content-Security-Policy")
-	require.Equal(t, " connect-src 'self' ws://localhost:3000;", header)
-}
-
-func TestHandlerConnectWebSocketDuplicateHeader(t *testing.T) {
-	csp := New(Config{
-		Connect:   []string{Self},
-		WebSocket: true,
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " connect-src 'self' ws://localhost:3000;", header)
-
-	r = &http.Request{}
-	r.Host = "localhost:3000"
-	rw = httptest.NewRecorder()
-	fn(rw, r)
-	header = rw.Header().Get("Content-Security-Policy")
-	require.Equal(t, " connect-src 'self' ws://localhost:3000;", header)
-}
-
-func TestHandlerConnectTLSWebSocket(t *testing.T) {
-	csp := New(Config{
-		Connect:   []string{Self},
-		WebSocket: true,
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.TLS = &tls.ConnectionState{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " connect-src 'self' wss://localhost:3000;", header)
-}
-
-func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContext(t *testing.T) {
-	hp := func(ctx context.Context) string {
-		// naive
-		return ctx.Value("originalHost").(string)
-	}
-
-	csp := New(Config{
-		Connect:   []string{Self},
-		WebSocket: true,
-	}).WithHostProvider(hp)
-	fn := csp.HandlerFunc()
-
-	ctx := context.WithValue(context.Background(), "originalHost", "example.com")
-	rw := httptest.NewRecorder()
-	r, err := http.NewRequestWithContext(ctx, http.MethodGet, "localhost:3000", nil)
-	require.NoError(t, err)
-	r.TLS = &tls.ConnectionState{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " connect-src 'self' wss://example.com;", header)
-}
-
-func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextEmpty(t *testing.T) {
-	hp := func(ctx context.Context) string {
-		// naive
-		return ctx.Value(12312).(string)
-	}
-	csp := New(Config{
-		Connect:   []string{Self},
-		WebSocket: true,
-	}).WithHostProvider(hp)
-	fn := csp.HandlerFunc()
-
-	ctx := context.WithValue(context.Background(), 12312, "")
-	rw := httptest.NewRecorder()
-	r, err := http.NewRequestWithContext(ctx, http.MethodGet, "localhost:3000", nil)
-	require.NoError(t, err)
-	r.TLS = &tls.ConnectionState{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " connect-src 'self' wss://localhost:3000;", header)
-}
-
-func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextMissing(t *testing.T) {
-	csp := New(Config{
-		Connect:   []string{Self},
-		WebSocket: true,
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "localhost:3000", nil)
-	require.NoError(t, err)
-	r.TLS = &tls.ConnectionState{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " connect-src 'self' wss://localhost:3000;", header)
-}
-
-func TestHandlerConnectWebSocketOnly(t *testing.T) {
-	csp := New(Config{
-		WebSocket: true,
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " connect-src ws://localhost:3000;", header)
 }
 
 func TestNegroniIntegration(t *testing.T) {
