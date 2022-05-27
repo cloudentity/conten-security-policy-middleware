@@ -1,0 +1,6 @@
+github.com/justinas/alice v1.2.0 h1:+MHSA/vccVCF4Uq37S42jwlkvI2Xzl7zTPCN5BnZNVo=
+github.com/justinas/alice v1.2.0/go.mod h1:fN5HRH/reO/zrUflLfTN43t3vXvKzvZIENsNEe7i7qA=
+github.com/pilu/xrequestid v0.0.0-20160221113542-870344eeaa6c h1:OED83ZrwOvyJcyXdJY7QaYkxjSE4cZn3m8S8przDWBk=
+github.com/pilu/xrequestid v0.0.0-20160221113542-870344eeaa6c/go.mod h1:x4pVk4/LSuA77JvDs9mGeOxYLmMyWUtD5GBqISpKTuo=
+github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=
+github.com/urfave/negroni v1.0.0/go.mod h1:Meg73S6kFm/4PpbYdq35yYWoCZ9mS/YSx+lKnmiohz4=
