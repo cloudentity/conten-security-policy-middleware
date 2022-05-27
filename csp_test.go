@@ -39,10 +39,7 @@ func TestHandlerDefaultPolicy(t *testing.T) {
 	r := &http.Request{}
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != "default-src 'none';" {
-		t.Log(header)
-		t.Error("expected header to be default-src 'none'")
-	}
+	require.Equal(t, "default-src 'none';", header)
 }
 
 func TestHandlerScriptPolicy(t *testing.T) {
@@ -55,10 +52,7 @@ func TestHandlerScriptPolicy(t *testing.T) {
 	r := &http.Request{}
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " script-src 'self';" {
-		t.Log(header)
-		t.Error("expected script-src to be 'self'")
-	}
+	require.Equal(t, " script-src 'self';", header)
 }
 
 func TestHandlerConnect(t *testing.T) {
@@ -71,10 +65,7 @@ func TestHandlerConnect(t *testing.T) {
 	r := &http.Request{}
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " connect-src 'self';" {
-		t.Log(header)
-		t.Error("expected connect-src to be 'self'")
-	}
+	require.Equal(t, " connect-src 'self';", header)
 }
 
 func TestHandlerConnectWebSocket(t *testing.T) {
@@ -89,10 +80,7 @@ func TestHandlerConnectWebSocket(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get("Content-Security-Policy")
-	if header != " connect-src 'self' ws://localhost:3000;" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "'self' ws://localhost:3000;")
-	}
+	require.Equal(t, " connect-src 'self' ws://localhost:3000;", header)
 }
 
 func TestHandlerConnectWebSocketDuplicateHeader(t *testing.T) {
@@ -107,19 +95,14 @@ func TestHandlerConnectWebSocketDuplicateHeader(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " connect-src 'self' ws://localhost:3000;" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "'self' ws://localhost:3000;")
-	}
+	require.Equal(t, " connect-src 'self' ws://localhost:3000;", header)
 
 	r = &http.Request{}
 	r.Host = "localhost:3000"
 	rw = httptest.NewRecorder()
 	fn(rw, r)
 	header = rw.Header().Get("Content-Security-Policy")
-	if header != " connect-src 'self' ws://localhost:3000;" {
-		t.Errorf("expected connect-src to be %q, got %q", "'self' ws://localhost:3000;", header)
-	}
+	require.Equal(t, " connect-src 'self' ws://localhost:3000;", header)
 }
 
 func TestHandlerConnectTLSWebSocket(t *testing.T) {
@@ -135,10 +118,7 @@ func TestHandlerConnectTLSWebSocket(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " connect-src 'self' wss://localhost:3000;" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "'self' wss://localhost:3000;")
-	}
+	require.Equal(t, " connect-src 'self' wss://localhost:3000;", header)
 }
 
 func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContext(t *testing.T) {
@@ -161,10 +141,7 @@ func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContext(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " connect-src 'self' wss://example.com;" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "'self' wss://example.com;")
-	}
+	require.Equal(t, " connect-src 'self' wss://example.com;", header)
 }
 
 func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextEmpty(t *testing.T) {
@@ -186,10 +163,7 @@ func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextEmpty(t *testing.
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " connect-src 'self' wss://localhost:3000;" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "'self' wss://localhost:3000;")
-	}
+	require.Equal(t, " connect-src 'self' wss://localhost:3000;", header)
 }
 
 func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextMissing(t *testing.T) {
@@ -206,10 +180,7 @@ func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextMissing(t *testin
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " connect-src 'self' wss://localhost:3000;" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "'self' wss://localhost:3000;")
-	}
+	require.Equal(t, " connect-src 'self' wss://localhost:3000;", header)
 }
 
 func TestHandlerConnectWebSocketOnly(t *testing.T) {
@@ -223,10 +194,7 @@ func TestHandlerConnectWebSocketOnly(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " connect-src ws://localhost:3000;" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "ws://localhost:3000;")
-	}
+	require.Equal(t, " connect-src ws://localhost:3000;", header)
 }
 
 func TestHandlerImg(t *testing.T) {
@@ -240,10 +208,7 @@ func TestHandlerImg(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " img-src 'self';" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "img-src 'self'")
-	}
+	require.Equal(t, " img-src 'self';", header)
 }
 
 func TestHandlerStyle(t *testing.T) {
@@ -257,10 +222,7 @@ func TestHandlerStyle(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	if header != " style-src 'self';" {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "style-src 'self'")
-	}
+	require.Equal(t, " style-src 'self';", header)
 }
 
 func TestHandlerEverything(t *testing.T) {
@@ -278,11 +240,7 @@ func TestHandlerEverything(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	expected := "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';"
-	if header != expected {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", expected)
-	}
+	require.Equal(t, "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';", header)
 }
 
 func TestHandlerMultiValues(t *testing.T) {
@@ -300,11 +258,7 @@ func TestHandlerMultiValues(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	expected := "default-src 'none' default-test; script-src 'self' script-test; connect-src 'self' connect-test; img-src 'self' img-test; style-src 'self' style-test;"
-	if header != expected {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", expected)
-	}
+	require.Equal(t, "default-src 'none' default-test; script-src 'self' script-test; connect-src 'self' connect-test; img-src 'self' img-test; style-src 'self' style-test;", header)
 }
 
 func TestHandlerAny(t *testing.T) {
@@ -318,11 +272,7 @@ func TestHandlerAny(t *testing.T) {
 	r.Host = "localhost:3000"
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
-	expected := "default-src *;"
-	if header != expected {
-		t.Log(header)
-		t.Errorf("expected connect-src to be %q", expected)
-	}
+	require.Equal(t, "default-src *;", header)
 }
 
 func TestNegroniIntegration(t *testing.T) {
@@ -355,9 +305,7 @@ func TestNegroniIntegration(t *testing.T) {
 
 	expected := "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';"
 	policy := res.Header.Get(CSPHeader)
-	if expected != policy {
-		t.Errorf("Expected Policy %q, got %q", expected, policy)
-	}
+	require.Equal(t, expected, policy)
 }
 
 // Ensure Middleware Chain is being invoked
@@ -388,10 +336,8 @@ func TestHandlerNegroniMiddlewareChain(t *testing.T) {
 	}
 	cspHeader := res.Header.Get(CSPHeader)
 	xRequestID := res.Header.Get("X-Request-Id")
-	if cspHeader != "connect-src 'self';" || xRequestID == "" {
-		t.Log(cspHeader, xRequestID)
-		t.Error("expected connect-src to be 'self' + random request id")
-	}
+	require.Equal(t, "connect-src 'self';", cspHeader)
+	require.NotEqual(t, "", xRequestID)
 }
 
 func TestAliceIntegration(t *testing.T) {
@@ -422,12 +368,7 @@ func TestAliceIntegration(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-
-	expected := "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self';"
-	policy := res.Header.Get(CSPHeader)
-	if expected != policy {
-		t.Errorf("Expected Policy %q, got %q", expected, policy)
-	}
+	require.Equal(t, "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'; font-src 'self';", res.Header.Get(CSPHeader))
 }
 
 func TestPartialConfig(t *testing.T) {
@@ -455,11 +396,7 @@ func TestPartialConfig(t *testing.T) {
 		t.Fail()
 	}
 
-	expected := "script-src 'self'; connect-src 'self';"
-	policy := res.Header.Get(CSPHeader)
-	if expected != policy {
-		t.Errorf("Expected Policy %q, got %q", expected, policy)
-	}
+	require.Equal(t, "script-src 'self'; connect-src 'self';", res.Header.Get(CSPHeader))
 }
 
 func TestHandlerReportURI(t *testing.T) {
@@ -472,9 +409,6 @@ func TestHandlerReportURI(t *testing.T) {
 	rw := httptest.NewRecorder()
 	r := &http.Request{}
 	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	if header != fmt.Sprintf(" report-uri %s;", reportURI) {
-		t.Log(header)
-		t.Errorf("expected report-uri to be %q", reportURI)
-	}
+
+	require.Equal(t, fmt.Sprintf(" report-uri %s;", reportURI), rw.Header().Get(CSPHeader))
 }
