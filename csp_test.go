@@ -15,57 +15,98 @@ import (
 	"github.com/urfave/negroni"
 )
 
-func TestHandlerNoPolicy(t *testing.T) {
-	csp := New(Config{})
-	fn := csp.HandlerFunc()
+func TestBaseCsp(t *testing.T) {
 
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	if header != "" {
-		t.Log(header)
-		t.Error("expected header to be empty")
+	var testcases = []struct {
+		name           string
+		csp            *CSP
+		expectedHeader string
+	}{
+		{
+			name:           "empty config",
+			csp:            New(Config{}),
+			expectedHeader: "",
+		},
+		{
+			name: "default policy",
+			csp: New(Config{
+				Default: []string{None},
+			}),
+			expectedHeader: "default-src 'none';",
+		},
+		{
+			name: "script policy",
+			csp: New(Config{
+				Script: []string{Self},
+			}),
+			expectedHeader: " script-src 'self';",
+		},
+		{
+			name: "connect policy",
+			csp: New(Config{
+				Connect: []string{Self},
+			}),
+			expectedHeader: " connect-src 'self';",
+		},
+		{
+			name: "img policy",
+			csp: New(Config{
+				Img: []string{Self},
+			}),
+			expectedHeader: " img-src 'self';",
+		},
+		{
+			name: "style policy",
+			csp: New(Config{
+				Style: []string{Self},
+			}),
+			expectedHeader: " style-src 'self';",
+		},
+		{
+			name: "everything",
+			csp: New(Config{
+				Default: []string{None},
+				Script:  []string{Self},
+				Connect: []string{Self},
+				Img:     []string{Self},
+				Style:   []string{Self},
+			}),
+			expectedHeader: "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';",
+		},
+		{
+			name: "multi-values",
+			csp: New(Config{
+				Default: []string{None, "default-test"},
+				Script:  []string{Self, "script-test"},
+				Connect: []string{Self, "connect-test"},
+				Img:     []string{Self, "img-test"},
+				Style:   []string{Self, "style-test"},
+			}),
+			expectedHeader: "default-src 'none' default-test; script-src 'self' script-test; connect-src 'self' connect-test; img-src 'self' img-test; style-src 'self' style-test;",
+		},
+
+		{
+			name: "any",
+			csp: New(Config{
+				Default: []string{Any},
+			}),
+			expectedHeader: "default-src *;",
+		},
 	}
-}
 
-func TestHandlerDefaultPolicy(t *testing.T) {
-	csp := New(Config{
-		Default: []string{None},
-	})
-	fn := csp.HandlerFunc()
+	for _, tc := range testcases {
+		t.Run(tc.name, func(tt *testing.T) {
+			fn := tc.csp.HandlerFunc()
 
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, "default-src 'none';", header)
-}
+			rw := httptest.NewRecorder()
+			r := &http.Request{}
+			fn(rw, r)
+			header := rw.Header().Get(CSPHeader)
+			require.Equal(t, tc.expectedHeader, header)
 
-func TestHandlerScriptPolicy(t *testing.T) {
-	csp := New(Config{
-		Script: []string{Self},
-	})
-	fn := csp.HandlerFunc()
+		})
+	}
 
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " script-src 'self';", header)
-}
-
-func TestHandlerConnect(t *testing.T) {
-	csp := New(Config{
-		Connect: []string{Self},
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " connect-src 'self';", header)
 }
 
 func TestHandlerConnectWebSocket(t *testing.T) {
@@ -195,84 +236,6 @@ func TestHandlerConnectWebSocketOnly(t *testing.T) {
 	fn(rw, r)
 	header := rw.Header().Get(CSPHeader)
 	require.Equal(t, " connect-src ws://localhost:3000;", header)
-}
-
-func TestHandlerImg(t *testing.T) {
-	csp := New(Config{
-		Img: []string{Self},
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " img-src 'self';", header)
-}
-
-func TestHandlerStyle(t *testing.T) {
-	csp := New(Config{
-		Style: []string{Self},
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, " style-src 'self';", header)
-}
-
-func TestHandlerEverything(t *testing.T) {
-	csp := New(Config{
-		Default: []string{None},
-		Script:  []string{Self},
-		Connect: []string{Self},
-		Img:     []string{Self},
-		Style:   []string{Self},
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self';", header)
-}
-
-func TestHandlerMultiValues(t *testing.T) {
-	csp := New(Config{
-		Default: []string{None, "default-test"},
-		Script:  []string{Self, "script-test"},
-		Connect: []string{Self, "connect-test"},
-		Img:     []string{Self, "img-test"},
-		Style:   []string{Self, "style-test"},
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, "default-src 'none' default-test; script-src 'self' script-test; connect-src 'self' connect-test; img-src 'self' img-test; style-src 'self' style-test;", header)
-}
-
-func TestHandlerAny(t *testing.T) {
-	csp := New(Config{
-		Default: []string{Any},
-	})
-	fn := csp.HandlerFunc()
-
-	rw := httptest.NewRecorder()
-	r := &http.Request{}
-	r.Host = "localhost:3000"
-	fn(rw, r)
-	header := rw.Header().Get(CSPHeader)
-	require.Equal(t, "default-src *;", header)
 }
 
 func TestNegroniIntegration(t *testing.T) {
