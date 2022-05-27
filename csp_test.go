@@ -211,6 +211,28 @@ func TestHandlerEverything(t *testing.T) {
 	}
 }
 
+func TestHandlerMultiValues(t *testing.T) {
+	csp := New(Config{
+		Default: []string{None, "default-test"},
+		Script:  []string{Self, "script-test"},
+		Connect: []string{Self, "connect-test"},
+		Img:     []string{Self, "img-test"},
+		Style:   []string{Self, "style-test"},
+	})
+	fn := csp.HandlerFunc()
+
+	rw := httptest.NewRecorder()
+	r := &http.Request{}
+	r.Host = "localhost:3000"
+	fn(rw, r)
+	header := rw.Header().Get(CSPHeader)
+	expected := "default-src 'none' default-test; script-src 'self' script-test; connect-src 'self' connect-test; img-src 'self' img-test; style-src 'self' style-test;"
+	if header != expected {
+		t.Log(header)
+		t.Errorf("expected connect-src to be %q", expected)
+	}
+}
+
 func TestHandlerAny(t *testing.T) {
 	csp := New(Config{
 		Default: []string{Any},
