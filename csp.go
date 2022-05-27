@@ -25,15 +25,16 @@ const (
 // Config is Content Security Policy Configuration. If you do not define a
 // policy string it will not be included in the policy output
 type Config struct {
-	WebSocket    bool     // enable dynamic websocket support in CSP
-	Default      []string // default-src CSP policy
-	Script       []string // script-src CSP policy
-	Connect      []string // connect-src CSP policy
-	Img          []string // img-src CSP policy
-	Style        []string // style-src CSP policy
-	Font         []string // font-src CSP policy
-	ReportURI    string   // report-uri CSP violation reports URI
-	IgnorePrefix []string // URL prefixes not to apply CSP too
+	WebSocket      bool     // enable dynamic websocket support in CSP
+	HostContextKey string   // key in Context storing the original HTTP Host
+	Default        []string // default-src CSP policy
+	Script         []string // script-src CSP policy
+	Connect        []string // connect-src CSP policy
+	Img            []string // img-src CSP policy
+	Style          []string // style-src CSP policy
+	Font           []string // font-src CSP policy
+	ReportURI      string   // report-uri CSP violation reports URI
+	IgnorePrefix   []string // URL prefixes not to apply CSP too
 }
 
 // StarterConfig is a reasonable default set of policies.
@@ -127,11 +128,19 @@ func (csp *CSP) handlerFunc() http.HandlerFunc {
 		}
 		connectPolicy = baseConnectPolicy
 		if csp.WebSocket {
+			host := r.Host
+
+			if csp.HostContextKey != "" {
+				if hostOverwrite, ok := r.Context().Value(csp.HostContextKey).(string); ok && hostOverwrite != "" {
+					host = hostOverwrite
+				}
+			}
+
 			proto := "ws"
 			if r.TLS != nil {
 				proto = "wss"
 			}
-			connectPolicy = fmt.Sprintf("%s %s://%s", connectPolicy, proto, r.Host)
+			connectPolicy = fmt.Sprintf("%s %s://%s", connectPolicy, proto, host)
 		}
 		if len(connectPolicy) > 0 {
 			connectPolicy += ";"

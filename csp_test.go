@@ -1,15 +1,18 @@
 package csp
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/justinas/alice"
-	"github.com/pilu/xrequestid"
-	"github.com/urfave/negroni"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/justinas/alice"
+	"github.com/pilu/xrequestid"
+	"github.com/stretchr/testify/require"
+	"github.com/urfave/negroni"
 )
 
 func TestHandlerNoPolicy(t *testing.T) {
@@ -134,7 +137,72 @@ func TestHandlerConnectTLSWebSocket(t *testing.T) {
 	header := rw.Header().Get(CSPHeader)
 	if header != " connect-src 'self' wss://localhost:3000;" {
 		t.Log(header)
-		t.Errorf("expected connect-src to be %q", "'self' ws://localhost:3000;")
+		t.Errorf("expected connect-src to be %q", "'self' wss://localhost:3000;")
+	}
+}
+
+func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContext(t *testing.T) {
+	csp := New(Config{
+		Connect:        []string{Self},
+		HostContextKey: "originalHost",
+		WebSocket:      true,
+	})
+	fn := csp.HandlerFunc()
+
+	ctx := context.WithValue(context.Background(), "originalHost", "example.com")
+	rw := httptest.NewRecorder()
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, "localhost:3000", nil)
+	require.NoError(t, err)
+	r.TLS = &tls.ConnectionState{}
+	r.Host = "localhost:3000"
+	fn(rw, r)
+	header := rw.Header().Get(CSPHeader)
+	if header != " connect-src 'self' wss://example.com;" {
+		t.Log(header)
+		t.Errorf("expected connect-src to be %q", "'self' wss://example.com;")
+	}
+}
+
+func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextEmpty(t *testing.T) {
+	csp := New(Config{
+		Connect:        []string{Self},
+		HostContextKey: "originalHost",
+		WebSocket:      true,
+	})
+	fn := csp.HandlerFunc()
+
+	ctx := context.WithValue(context.Background(), "originalHost", "")
+	rw := httptest.NewRecorder()
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, "localhost:3000", nil)
+	require.NoError(t, err)
+	r.TLS = &tls.ConnectionState{}
+	r.Host = "localhost:3000"
+	fn(rw, r)
+	header := rw.Header().Get(CSPHeader)
+	if header != " connect-src 'self' wss://localhost:3000;" {
+		t.Log(header)
+		t.Errorf("expected connect-src to be %q", "'self' wss://localhost:3000;")
+	}
+}
+
+func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextMissing(t *testing.T) {
+	csp := New(Config{
+		Connect:        []string{Self},
+		HostContextKey: "originalHost",
+		WebSocket:      true,
+	})
+	fn := csp.HandlerFunc()
+
+	rw := httptest.NewRecorder()
+	r, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "localhost:3000", nil)
+	require.NoError(t, err)
+	r.TLS = &tls.ConnectionState{}
+	r.Host = "localhost:3000"
+	fn(rw, r)
+	header := rw.Header().Get(CSPHeader)
+	if header != " connect-src 'self' wss://localhost:3000;" {
+		t.Log(header)
+		t.Errorf("expected connect-src to be %q", "'self' wss://localhost:3000;")
 	}
 }
 
