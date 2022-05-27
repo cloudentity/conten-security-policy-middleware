@@ -157,7 +157,7 @@ func (csp *CSP) handlerFunc() http.HandlerFunc {
 		}
 		policy := fmt.Sprintf("%s%s%s", preConnectPolicy, connectPolicy, postConnectPolicy)
 		if policy != "" {
-			rw.Header().Add(CSPHeader, policy)
+			rw.Header().Set(CSPHeader, policy)
 		}
 	}
 }
