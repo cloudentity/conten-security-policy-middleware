@@ -1,10 +1,12 @@
 package csp
 
 import (
+	"context"
 	"fmt"
-	"github.com/urfave/negroni"
 	"net/http"
 	"strings"
+
+	"github.com/urfave/negroni"
 )
 
 // Helpful constants for CSP values
@@ -25,16 +27,15 @@ const (
 // Config is Content Security Policy Configuration. If you do not define a
 // policy string it will not be included in the policy output
 type Config struct {
-	WebSocket      bool     // enable dynamic websocket support in CSP
-	HostContextKey string   // key in Context storing the original HTTP Host
-	Default        []string // default-src CSP policy
-	Script         []string // script-src CSP policy
-	Connect        []string // connect-src CSP policy
-	Img            []string // img-src CSP policy
-	Style          []string // style-src CSP policy
-	Font           []string // font-src CSP policy
-	ReportURI      string   // report-uri CSP violation reports URI
-	IgnorePrefix   []string // URL prefixes not to apply CSP too
+	WebSocket    bool     // enable dynamic websocket support in CSP
+	Default      []string // default-src CSP policy
+	Script       []string // script-src CSP policy
+	Connect      []string // connect-src CSP policy
+	Img          []string // img-src CSP policy
+	Style        []string // style-src CSP policy
+	Font         []string // font-src CSP policy
+	ReportURI    string   // report-uri CSP violation reports URI
+	IgnorePrefix []string // URL prefixes not to apply CSP too
 }
 
 // StarterConfig is a reasonable default set of policies.
@@ -53,14 +54,23 @@ func StarterConfig() Config {
 // CSP is a http middleware that configures CSP in the response header of an http request
 type CSP struct {
 	*Config
-	handler http.HandlerFunc
+	handler      http.HandlerFunc
+	hostProvider HostProvider
 }
+
+type HostProvider func(ctx context.Context) string
 
 // New returns a new instance of CSP Middleware
 func New(config Config) *CSP {
 	instance := &CSP{Config: &config}
 	instance.handler = instance.handlerFunc()
 	return instance
+}
+
+// WithHostProvider adds host provider used to calculate Host value set for Websocket
+func (csp *CSP) WithHostProvider(hp HostProvider) *CSP {
+	csp.hostProvider = hp
+	return csp
 }
 
 // NegroniHandlerFunc returns a function with the negroni middleware interface
@@ -130,8 +140,8 @@ func (csp *CSP) handlerFunc() http.HandlerFunc {
 		if csp.WebSocket {
 			host := r.Host
 
-			if csp.HostContextKey != "" {
-				if hostOverwrite, ok := r.Context().Value(csp.HostContextKey).(string); ok && hostOverwrite != "" {
+			if csp.hostProvider != nil {
+				if hostOverwrite := csp.hostProvider(r.Context()); hostOverwrite != "" {
 					host = hostOverwrite
 				}
 			}

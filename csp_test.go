@@ -142,11 +142,15 @@ func TestHandlerConnectTLSWebSocket(t *testing.T) {
 }
 
 func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContext(t *testing.T) {
+	hp := func(ctx context.Context) string {
+		// naive
+		return ctx.Value("originalHost").(string)
+	}
+
 	csp := New(Config{
-		Connect:        []string{Self},
-		HostContextKey: "originalHost",
-		WebSocket:      true,
-	})
+		Connect:   []string{Self},
+		WebSocket: true,
+	}).WithHostProvider(hp)
 	fn := csp.HandlerFunc()
 
 	ctx := context.WithValue(context.Background(), "originalHost", "example.com")
@@ -164,14 +168,17 @@ func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContext(t *testing.T) {
 }
 
 func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextEmpty(t *testing.T) {
+	hp := func(ctx context.Context) string {
+		// naive
+		return ctx.Value(12312).(string)
+	}
 	csp := New(Config{
-		Connect:        []string{Self},
-		HostContextKey: "originalHost",
-		WebSocket:      true,
-	})
+		Connect:   []string{Self},
+		WebSocket: true,
+	}).WithHostProvider(hp)
 	fn := csp.HandlerFunc()
 
-	ctx := context.WithValue(context.Background(), "originalHost", "")
+	ctx := context.WithValue(context.Background(), 12312, "")
 	rw := httptest.NewRecorder()
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, "localhost:3000", nil)
 	require.NoError(t, err)
@@ -187,9 +194,8 @@ func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextEmpty(t *testing.
 
 func TestHandlerConnectTLSWebSocketWithHostOverwrittenInContextMissing(t *testing.T) {
 	csp := New(Config{
-		Connect:        []string{Self},
-		HostContextKey: "originalHost",
-		WebSocket:      true,
+		Connect:   []string{Self},
+		WebSocket: true,
 	})
 	fn := csp.HandlerFunc()
 
